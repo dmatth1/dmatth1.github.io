@@ -155,57 +155,25 @@ hash probed against four row-group filters in parallel) recovers
 most of the gap by overlapping four cache misses in flight at once.
 ~1.5× out-of-L3, more than triple the single-key gain.
 
-## What it fixes — and what it doesn't
+## What it touches
 
-The Parquet ecosystem moved through a "should we displace bloom?"
-cycle recently. Databricks deprecated Parquet bloom in Delta in
-favour of Photon predictive I/O + liquid clustering. That displacement
-was driven by storage and maintenance, not probe CPU.
+| Concern                                          | AVX2 mitigates?                          |
+|--------------------------------------------------|------------------------------------------|
+| Probe CPU on large queries                       | Yes — 3–5× in-cache, 1.15–1.5× out-of-L3 |
+| `WHERE col IN (val1, val2, ...)` cost            | Yes — 4-way bulk amortises across values |
+| Build CPU during writes                          | Yes — bulk insert path                   |
+| Storage overhead (~10 bits/value extra per file) | No                                       |
+| FP rate vs alternatives (min/max + page indexes) | No                                       |
+| Maintenance cost on UPDATE/MERGE rebuild         | No                                       |
 
-| Concern                                          | AVX2 mitigates?                              |
-|--------------------------------------------------|----------------------------------------------|
-| Probe CPU on large queries                       | Yes — 3–5× in-cache, 1.15–1.5× out-of-L3     |
-| `WHERE col IN (val1, val2, ...)` cost            | Yes — 4-way bulk amortises across values     |
-| Build CPU during writes                          | Yes — bulk insert path                       |
-| Storage overhead (~10 bits/value extra per file) | No                                           |
-| FP rate vs alternatives (min/max + page indexes) | No                                           |
-| Maintenance cost on UPDATE/MERGE rebuild         | No                                           |
-
-The AVX2 path doesn't argue against Photon-style displacement on
-storage grounds. It widens the envelope of queries where keeping the
-bloom beats alternative skipping. For ecosystems without Photon-style
-alternatives — Iceberg, Hudi, the rest of the OSS lakehouse, native
-engines like DuckDB and ClickHouse — it's a direct improvement to
-the core scan path with no behaviour change.
-
-## At scale
-
-The 1 GiB regime saves ~224 µs per `SELECT WHERE col = 'X'` query
-(4-way bulk vs scalar):
-
-| Query volume     | CPU saved/day | What it is |
-|------------------|---------------|------------|
-| 100k queries/day | 22 sec        | invisible  |
-| 10M queries/day  | 37 min        | ~0.25 core |
-| 100M queries/day | ~6 hours      | ~16 cores  |
-| 1B queries/day   | ~62 hours     | ~160 cores |
-
-Per query the saving is invisible. Bloom is 2–5% of total query CPU
-in most realistic engines, so a 1.5× speedup on that slice is ~1–3%
-on total wall time. The case isn't any one deployment — one patch in
-Apache Arrow C++ ships to ~20 downstream engines for years. The total
-is the integral, not the slice.
+Same on-disk format, no behaviour change for any reader.
 
 ## ARM
 
-x86 AVX2 only. ARM is roughly 15–25% of cloud server volume in 2026
-and growing (Graviton 3/4, Cobalt 100, Apple Silicon). NEON maps
-almost line-for-line, with two ops per 256-bit block since NEON is
-128-bit. SVE2 fits the 8-lane pattern naturally on Graviton 3/4.
-
-Upstream, the AVX2 path lands behind a CpuInfo runtime dispatch;
-non-AVX2 builds keep the scalar path. NEON / SVE2 are natural
-follow-ups.
+x86 AVX2 only. NEON maps almost line-for-line, with two ops per
+256-bit block since NEON is 128-bit. SVE2 fits the 8-lane pattern
+naturally on Graviton 3/4. Upstream the AVX2 path lands behind a
+CpuInfo runtime dispatch; non-AVX2 builds keep the scalar path.
 
 ## The repo
 
