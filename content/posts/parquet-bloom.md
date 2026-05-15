@@ -254,7 +254,7 @@ scalar path unchanged. NEON / SVE2 are natural follow-up patches.
 
 Standalone bench with the diff-test guarantee, vendored scalar
 references from arrow-cpp / arrow-rs / Velox for diffing against
-upstream, full results, and the integration patch sketch:
+upstream, and full results:
 
 **[github.com/dmatth1/quickbloom](https://github.com/dmatth1/quickbloom)**
 
@@ -266,8 +266,6 @@ The relevant directories (all under `investigations/`):
   arrow-rs / Velox source so future contributors can diff against
   current upstream.
 - `investigations/PARQUET.md` — the technical analysis.
-- `investigations/UPSTREAMING.md` — strategy notes on landing the patch
-  upstream.
 
 ## What I'd like to see
 
