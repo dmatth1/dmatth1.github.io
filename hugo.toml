@@ -1,5 +1,6 @@
 # Hugo configuration for the personal site.
 # Serves at https://dmatth1.github.io/.
+# Deployed via the workflow in .github/workflows/hugo.yml.
 # If you point a custom domain at the repo, change baseURL accordingly.
 
 baseURL = "https://dmatth1.github.io/"
