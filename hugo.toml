@@ -1,0 +1,98 @@
+# Hugo configuration for the personal site.
+# Serves at https://dmatth1.github.io/.
+# If you point a custom domain at the repo, change baseURL accordingly.
+
+baseURL = "https://dmatth1.github.io/"
+languageCode = "en-us"
+title = "dmatth1"
+theme = "PaperMod"
+
+# Sensible defaults for an engineer blog.
+enableRobotsTXT = true
+buildDrafts = false
+buildFuture = false
+buildExpired = false
+pygmentsUseClasses = true
+
+[minify]
+  disableXML = true
+  minifyOutput = true
+
+[params]
+  env = "production"
+  title = "dmatth1"
+  description = "Systems engineering notes. Mostly Bloom filters at the moment."
+  author = "dmatth1"
+
+  defaultTheme = "auto"             # auto | light | dark
+  disableThemeToggle = false
+  ShowReadingTime = true
+  ShowShareButtons = false
+  ShowPostNavLinks = true
+  ShowBreadCrumbs = true
+  ShowCodeCopyButtons = true
+  ShowRssButtonInSectionTermList = true
+  UseHugoToc = true
+  disableSpecial1stPost = false
+  hideMeta = false
+
+  [params.homeInfoParams]
+    Title = "Hi 👋"
+    Content = """
+Systems engineering notes. Mostly Bloom filters at the moment.
+
+The work — code, benches, analyses — lives in
+[github.com/dmatth1/evolve](https://github.com/dmatth1/evolve).
+"""
+
+  [[params.socialIcons]]
+    name = "github"
+    url = "https://github.com/dmatth1"
+
+  [params.assets]
+    disableHLJS = true
+    favicon = ""
+    favicon16x16 = ""
+
+  [params.fuseOpts]
+    isCaseSensitive = false
+    shouldSort = true
+    location = 0
+    distance = 1000
+    threshold = 0.4
+    minMatchCharLength = 0
+    keys = ["title", "permalink", "summary", "content"]
+
+[menu]
+  [[menu.main]]
+    identifier = "posts"
+    name = "posts"
+    url = "/posts/"
+    weight = 10
+  [[menu.main]]
+    identifier = "tags"
+    name = "tags"
+    url = "/tags/"
+    weight = 20
+  [[menu.main]]
+    identifier = "search"
+    name = "search"
+    url = "/search/"
+    weight = 30
+  [[menu.main]]
+    identifier = "github"
+    name = "github"
+    url = "https://github.com/dmatth1"
+    weight = 40
+
+# PaperMod-specific: enable client-side search via FlexSearch.
+[outputs]
+  home = ["HTML", "RSS", "JSON"]
+
+[markup]
+  [markup.highlight]
+    noClasses = false
+    codeFences = true
+    guessSyntax = true
+    lineNos = false
+    style = "github-dark"
