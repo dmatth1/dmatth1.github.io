@@ -1,26 +1,26 @@
 ---
-title: "The entire Parquet ecosystem ships a scalar bloom filter probe"
+title: "arrow-cpp, arrow-rs, and Velox still ship the scalar Parquet bloom probe"
 date: 2026-05-15
-description: "Apache Arrow C++, arrow-rs, and Velox all ship line-for-line identical scalar SBBF probes. A bit-identical AVX2 drop-in is 3–5× faster on the probe microbenchmark; end-to-end query impact is workload-dependent."
+description: "arrow-go shipped AVX2/SSE4/NEON SBBF probes in 18.3.0 (PR #336). The other three big readers still ship the scalar reference. Here's a drop-in port, bit-identical and 3–5× faster on the probe microbenchmark."
 tags: ["bloom-filter", "performance", "parquet", "simd", "apache-arrow"]
 ShowToc: true
 TocOpen: false
 draft: false
 ---
 
-The Parquet Split-Block Bloom Filter was specified in 2018 around
-256-bit blocks — exactly one `__m256i` AVX2 register. The on-disk
-constants slot directly into AVX2 lanes.
+arrow-go shipped AVX2/SSE4/NEON SBBF probes in 18.3.0
+([PR #336](https://github.com/apache/arrow-go/pull/336)). The other
+three big native Parquet readers — arrow-cpp, arrow-rs, and Velox —
+still ship the scalar reference, line-for-line identical across all
+three. Together they cover essentially the C-family Parquet
+ecosystem: DuckDB, ClickHouse, Polars, DataFusion, Trino, Presto,
+Spark-native, StarRocks, Doris, pyarrow → pandas, Apache Drill.
 
-Eight years on, no native Parquet reader I could find uses AVX2 in
-the probe path. Apache Arrow C++, arrow-rs, and Velox ship the same
-scalar 8-iteration loop with an early-exit branch, line-for-line
-identical across all three. Together they cover essentially the
-entire native Parquet ecosystem: DuckDB, ClickHouse, Polars,
-DataFusion, Trino, Presto, Spark-native, StarRocks, Doris,
-pyarrow → pandas, Apache Drill.
+A C++ port of the arrow-go approach: bit-identical on 167M
+(query, filter) pairs, 3–5× in-cache in the probe microbenchmark,
+1.5× out-of-L3 with a 4-way bulk path across row-group filters.
 
-## The three implementations
+## The three still-scalar implementations
 
 Apache Arrow C++ ([`bloom_filter.cc:348`](https://github.com/apache/arrow/blob/main/cpp/src/parquet/bloom_filter.cc#L348)),
 the reference forked by most C++ readers:
@@ -96,8 +96,10 @@ The 2018 SBBF spec dictates:
 - The eight 32-bit SALT constants slot into `_mm256_load_si256(SALT)`.
 
 The on-disk format is, in essence, an instruction sheet for an AVX2
-implementation. Apache Arrow C++ shipped the scalar reference from day
-one; arrow-rs and Velox each ported from it, scalar shape and all.
+implementation. Apache Impala and Kudu shipped AVX2 SBBF probes
+years ago; arrow-go added AVX2/SSE4/NEON last year. Apache Arrow
+C++ shipped the scalar pseudocode reference from day one, and
+arrow-rs and Velox each ported from it, scalar shape and all.
 
 ## The AVX2 probe
 
