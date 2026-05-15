@@ -155,59 +155,6 @@ hash probed against four row-group filters in parallel) recovers
 most of the gap by overlapping four cache misses in flight at once.
 ~1.5× out-of-L3, more than triple the single-key gain.
 
-### Caveats
-
-One machine, one compiler, virtualised. The ALU-collapse mechanism
-holds across micro-arches, but the absolute ratio shifts:
-
-- **Zen 3/4**: faster `vpmullo` (~3–4 cyc vs ~5 on Cascade Lake) plus
-  a wider OoO window that hides more of the scalar branch cost.
-  Expect **~2.5–3.5× in-cache**.
-- **Sapphire Rapids**: faster `vpmullo` and wider issue. Expect
-  **~3× in-cache**.
-- **Out-of-L3 on high-MLP systems** (Genoa, SPR): wider memory
-  pipes narrow the single-key gap further — the 1.15× number could
-  be **1.05–1.1×**. The 4-way bulk gain holds better because it's
-  specifically an MLP trick, but I'd estimate **1.3–1.4×** rather
-  than 1.5×.
-
-Needs measurement on Zen 3+, Sapphire Rapids, and Graviton 3/4 to
-hold up across the cloud x86/ARM mix.
-
-## Scope
-
-This is a probe microbenchmark. The leap to "matters for Parquet
-reads" needs a denominator the post doesn't have.
-
-A Parquet scan is a pipeline: I/O, decompression (Snappy/Zstd),
-thrift parsing, column decoding (RLE/dictionary), predicate
-evaluation, and only then the bloom probe. Engines apply row-group
-min/max stats *before* bloom — by the time `FindHash` runs, most
-row groups have already been pruned. The cases where bloom is
-meaningful are narrow:
-
-- Column with bad min/max coverage (e.g. random IDs, hashes).
-- High-cardinality equality filter where stats don't help.
-- No page index, or page-index pruning misses.
-
-My estimate of where the probe sits in end-to-end wall time:
-
-| Workload                                          | Probe share | AVX2 wall-time win |
-|---------------------------------------------------|------------:|-------------------:|
-| I/O-bound cold scan (object store)                |       <0.5% |       unmeasurable |
-| Decode-bound warm scan, selective predicates      |        1–3% |              <0.5% |
-| Point queries where bloom decides selectivity     |       5–15% |               2–5% |
-| `WHERE col IN (...)`, many values, mostly miss    |       3–10% |               1–4% |
-
-Estimates, not measurements — a flame graph showing `FindHash` share
-on TPC-H Q12/Q19 or a ClickBench query with a selective string
-equality, before and after the AVX2 swap, would settle it.
-
-The microbenchmark establishes the probe is faster. The bit-identical
-property establishes the patch is safe. End-to-end impact will
-depend on workload, and on most real analytic queries it'll be
-small.
-
 ## What the AVX2 path touches
 
 Scoped to the probe stage, not query wall time:
