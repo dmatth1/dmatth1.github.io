@@ -1,7 +1,7 @@
 ---
 title: "The entire Parquet ecosystem ships a scalar bloom filter probe"
 date: 2026-05-15
-description: "Apache Arrow C++, arrow-rs, and Velox all ship line-for-line identical scalar SBBF probes. An AVX2 drop-in is bit-identical and 3–5× faster."
+description: "Apache Arrow C++, arrow-rs, and Velox all ship line-for-line identical scalar SBBF probes. A bit-identical AVX2 drop-in is 3–5× faster on the probe microbenchmark; end-to-end query impact is workload-dependent."
 tags: ["bloom-filter", "performance", "parquet", "simd", "apache-arrow"]
 ShowToc: true
 TocOpen: false
@@ -155,25 +155,85 @@ hash probed against four row-group filters in parallel) recovers
 most of the gap by overlapping four cache misses in flight at once.
 ~1.5× out-of-L3, more than triple the single-key gain.
 
-## What it touches
+### Caveats
 
-| Concern                                          | AVX2 mitigates?                          |
-|--------------------------------------------------|------------------------------------------|
-| Probe CPU on large queries                       | Yes — 3–5× in-cache, 1.15–1.5× out-of-L3 |
-| `WHERE col IN (val1, val2, ...)` cost            | Yes — 4-way bulk amortises across values |
-| Build CPU during writes                          | Yes — bulk insert path                   |
-| Storage overhead (~10 bits/value extra per file) | No                                       |
-| FP rate vs alternatives (min/max + page indexes) | No                                       |
-| Maintenance cost on UPDATE/MERGE rebuild         | No                                       |
+One machine, one compiler, virtualised. The ALU-collapse mechanism
+holds across micro-arches, but the absolute ratio shifts:
+
+- **Zen 3/4**: faster `vpmullo` (~3–4 cyc vs ~5 on Cascade Lake) plus
+  a wider OoO window that hides more of the scalar branch cost.
+  Expect **~2.5–3.5× in-cache**.
+- **Sapphire Rapids**: faster `vpmullo` and wider issue. Expect
+  **~3× in-cache**.
+- **Out-of-L3 on high-MLP systems** (Genoa, SPR): wider memory
+  pipes narrow the single-key gap further — the 1.15× number could
+  be **1.05–1.1×**. The 4-way bulk gain holds better because it's
+  specifically an MLP trick, but I'd estimate **1.3–1.4×** rather
+  than 1.5×.
+
+Needs measurement on Zen 3+, Sapphire Rapids, and Graviton 3/4 to
+hold up across the cloud x86/ARM mix.
+
+## Scope
+
+This is a probe microbenchmark. The leap to "matters for Parquet
+reads" needs a denominator the post doesn't have.
+
+A Parquet scan is a pipeline: I/O, decompression (Snappy/Zstd),
+thrift parsing, column decoding (RLE/dictionary), predicate
+evaluation, and only then the bloom probe. Engines apply row-group
+min/max stats *before* bloom — by the time `FindHash` runs, most
+row groups have already been pruned. The cases where bloom is
+meaningful are narrow:
+
+- Column with bad min/max coverage (e.g. random IDs, hashes).
+- High-cardinality equality filter where stats don't help.
+- No page index, or page-index pruning misses.
+
+My estimate of where the probe sits in end-to-end wall time:
+
+| Workload                                          | Probe share | AVX2 wall-time win |
+|---------------------------------------------------|------------:|-------------------:|
+| I/O-bound cold scan (object store)                |       <0.5% |       unmeasurable |
+| Decode-bound warm scan, selective predicates      |        1–3% |              <0.5% |
+| Point queries where bloom decides selectivity     |       5–15% |               2–5% |
+| `WHERE col IN (...)`, many values, mostly miss    |       3–10% |               1–4% |
+
+Estimates, not measurements — a flame graph showing `FindHash` share
+on TPC-H Q12/Q19 or a ClickBench query with a selective string
+equality, before and after the AVX2 swap, would settle it.
+
+The microbenchmark establishes the probe is faster. The bit-identical
+property establishes the patch is safe. End-to-end impact will
+depend on workload, and on most real analytic queries it'll be
+small.
+
+## What the AVX2 path touches
+
+Scoped to the probe stage, not query wall time:
+
+| Concern                                          | AVX2 changes it?                                  |
+|--------------------------------------------------|---------------------------------------------------|
+| Probe-stage CPU                                  | Yes — 3–5× in-cache, 1.15–1.5× out-of-L3 (microbench) |
+| `WHERE col IN (val1, val2, ...)` probe cost      | Yes — 4-way bulk amortises across values          |
+| Build-stage CPU during writes                    | Yes — bulk insert path                            |
+| Storage overhead (~10 bits/value extra per file) | No                                                |
+| FP rate vs alternatives (min/max + page indexes) | No                                                |
+| Maintenance cost on UPDATE/MERGE rebuild         | No                                                |
 
 Same on-disk format, no behaviour change for any reader.
 
 ## ARM
 
-x86 AVX2 only. NEON maps almost line-for-line, with two ops per
-256-bit block since NEON is 128-bit. SVE2 fits the 8-lane pattern
-naturally on Graviton 3/4. Upstream the AVX2 path lands behind a
-CpuInfo runtime dispatch; non-AVX2 builds keep the scalar path.
+x86 AVX2 only — no NEON or SVE2 measurements. The intrinsics map
+almost line-for-line on paper (NEON with two ops per 256-bit block
+since it's 128-bit; SVE2 with one register on Graviton 3/4), but
+without numbers that's hand-wave. The ALU-collapse argument should
+still apply on NEON since the dependent-load chain is the same; my
+guess is **~2–2.5×** in-cache, but it needs measuring.
+
+Upstream the AVX2 path lands behind a CpuInfo runtime dispatch;
+non-AVX2 builds keep the scalar path.
 
 ## The repo
 
