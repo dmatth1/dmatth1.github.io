@@ -11,6 +11,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  issues: write
 
 concurrency:
   group: "pages"
@@ -31,7 +32,7 @@ jobs:
           wget -O ${{ runner.temp }}/hugo.deb \
             https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb \
             && sudo dpkg -i ${{ runner.temp }}/hugo.deb
-          hugo version
+          hugo version | tee /tmp/hugo-version.log
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,55 +44,60 @@ jobs:
           git clone --depth=1 --branch=v8.0 \
             https://github.com/adityatelange/hugo-PaperMod.git \
             themes/PaperMod
+          ls themes/PaperMod | tee /tmp/papermod-ls.log
 
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
 
       - name: Build with Hugo (capture output)
+        id: hugo_build
         env:
           HUGO_ENVIRONMENT: production
           HUGO_ENV: production
           BASE_URL: ${{ steps.pages.outputs.base_url }}
         run: |
           set +e
-          {
-            echo "## Diagnostics"
-            echo '### hugo version'
-            echo '```'
-            hugo version
-            echo '```'
-            echo '### Working dir tree (top level)'
-            echo '```'
-            ls -la
-            echo '```'
-            echo '### themes/PaperMod'
-            echo '```'
-            ls themes/PaperMod | head -30
-            echo '```'
-            echo '### hugo.toml'
-            echo '```toml'
-            cat hugo.toml
-            echo '```'
-            echo '### BASE_URL'
-            echo "BASE_URL='${BASE_URL}'"
-          } >> "$GITHUB_STEP_SUMMARY"
-
           hugo \
             --gc \
             --minify \
             --logLevel info \
-            --baseURL "${BASE_URL}/" 2>&1 | tee /tmp/hugo.log
-          rc=${PIPESTATUS[0]}
-
-          {
-            echo "## Hugo build output (exit ${rc})"
-            echo '```'
-            cat /tmp/hugo.log
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
+            --baseURL "${BASE_URL}/" > /tmp/hugo.log 2>&1
+          rc=$?
+          echo "=== HUGO EXIT: $rc ==="
+          cat /tmp/hugo.log
+          echo "hugo_rc=${rc}" >> "$GITHUB_OUTPUT"
           exit $rc
+
+      - name: Report failure as issue
+        if: failure() && steps.hugo_build.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Hugo build failed in run [${{ github.run_id }}](${{ github.server_url }}/${{ github.repo }}/actions/runs/${{ github.run_id }})."
+            echo
+            echo "### hugo version"
+            echo '```'
+            cat /tmp/hugo-version.log 2>/dev/null || echo "(missing)"
+            echo '```'
+            echo "### themes/PaperMod"
+            echo '```'
+            cat /tmp/papermod-ls.log 2>/dev/null || echo "(missing)"
+            echo '```'
+            echo "### BASE_URL"
+            echo '```'
+            echo "${{ steps.pages.outputs.base_url }}"
+            echo '```'
+            echo "### hugo build log"
+            echo '```'
+            cat /tmp/hugo.log 2>/dev/null | head -c 50000 || echo "(missing)"
+            echo '```'
+          } > /tmp/issue-body.md
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "Hugo build failed (run ${{ github.run_id }})" \
+            --body-file /tmp/issue-body.md
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
