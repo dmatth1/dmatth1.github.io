@@ -256,16 +256,18 @@ Standalone bench with the diff-test guarantee, vendored scalar
 references from arrow-cpp / arrow-rs / Velox for diffing against
 upstream, full results, and the integration patch sketch:
 
-**[github.com/dmatth1/evolve](https://github.com/dmatth1/evolve)**
+**[github.com/dmatth1/quickbloom](https://github.com/dmatth1/quickbloom)**
 
-The relevant directories:
+The relevant directories (all under `investigations/`):
 
-- `parquet_port/` — the bench. `make && ./bench` reproduces the numbers
-  above. Diff-test runs every time.
-- `parquet_port/reference/` — vendored Apache Arrow C++ / arrow-rs /
-  Velox source so future contributors can diff against current upstream.
-- `PARQUET.md` — the technical analysis.
-- `UPSTREAMING.md` — strategy notes on landing the patch upstream.
+- `investigations/parquet_port/` — the bench. `make && ./bench`
+  reproduces the numbers above. Diff-test runs every time.
+- `investigations/parquet_port/reference/` — vendored Apache Arrow C++ /
+  arrow-rs / Velox source so future contributors can diff against
+  current upstream.
+- `investigations/PARQUET.md` — the technical analysis.
+- `investigations/UPSTREAMING.md` — strategy notes on landing the patch
+  upstream.
 
 ## What I'd like to see
 
@@ -290,8 +292,7 @@ through the standard process.
 ## Acknowledgments
 
 This is a small slice of a larger body of work on single-key Bloom
-filter performance (`evolve`'s differential-evolution harness for
-systems code, separate v11/v14 ports for Scylla, DuckDB, Reth,
-RedisBloom). The Parquet finding came out of mapping what's actually
-shipped vs what's measured in the literature. Surprised it was sitting
-there.
+filter performance (a differential-evolution harness for systems code,
+separate v11/v14 ports for Scylla, DuckDB, Reth, RedisBloom). The
+Parquet finding came out of mapping what's actually shipped vs what's
+measured in the literature. Surprised it was sitting there.
