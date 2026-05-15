@@ -24,7 +24,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # PaperMod's main branch tracks newer Hugo versions; keep this current.
       HUGO_VERSION: 0.151.0
     steps:
       - name: Install Hugo CLI
@@ -44,22 +43,55 @@ jobs:
           git clone --depth=1 --branch=v8.0 \
             https://github.com/adityatelange/hugo-PaperMod.git \
             themes/PaperMod
-          ls themes/PaperMod
 
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
 
-      - name: Build with Hugo
+      - name: Build with Hugo (capture output)
         env:
           HUGO_ENVIRONMENT: production
           HUGO_ENV: production
+          BASE_URL: ${{ steps.pages.outputs.base_url }}
         run: |
+          set +e
+          {
+            echo "## Diagnostics"
+            echo '### hugo version'
+            echo '```'
+            hugo version
+            echo '```'
+            echo '### Working dir tree (top level)'
+            echo '```'
+            ls -la
+            echo '```'
+            echo '### themes/PaperMod'
+            echo '```'
+            ls themes/PaperMod | head -30
+            echo '```'
+            echo '### hugo.toml'
+            echo '```toml'
+            cat hugo.toml
+            echo '```'
+            echo '### BASE_URL'
+            echo "BASE_URL='${BASE_URL}'"
+          } >> "$GITHUB_STEP_SUMMARY"
+
           hugo \
             --gc \
             --minify \
             --logLevel info \
-            --baseURL "${{ steps.pages.outputs.base_url }}/"
+            --baseURL "${BASE_URL}/" 2>&1 | tee /tmp/hugo.log
+          rc=${PIPESTATUS[0]}
+
+          {
+            echo "## Hugo build output (exit ${rc})"
+            echo '```'
+            cat /tmp/hugo.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          exit $rc
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
