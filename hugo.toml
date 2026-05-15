@@ -21,8 +21,9 @@ pygmentsUseClasses = true
 [params]
   env = "production"
   title = "dmatth1"
-  description = "Systems engineering notes. Mostly Bloom filters at the moment."
+  description = "Personal blog."
   author = "dmatth1"
+  mainSections = ["posts"]
 
   defaultTheme = "auto"             # auto | light | dark
   disableThemeToggle = false
@@ -37,13 +38,8 @@ pygmentsUseClasses = true
   hideMeta = false
 
   [params.homeInfoParams]
-    Title = "Hi 👋"
-    Content = """
-Systems engineering notes. Mostly Bloom filters at the moment.
-
-The work — code, benches, analyses — lives in
-[github.com/dmatth1/evolve](https://github.com/dmatth1/evolve).
-"""
+    Title = "dmatth1"
+    Content = "This is my personal blog."
 
   [[params.socialIcons]]
     name = "github"
