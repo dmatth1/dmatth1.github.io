@@ -1,0 +1,13 @@
+{{- /*
+  Shim for PaperMod's broken partial lookup path.
+
+  PaperMod v8.0's opengraph.html / twitter_cards.html / schema.html call
+  `partial "partials/templates/_funcs/get-page-images" .` with a redundant
+  `partials/` prefix. Newer Hugo treats that as a literal path, looking up
+  layouts/partials/partials/templates/_funcs/get-page-images.html.
+
+  This file lives at that literal path so the lookup succeeds. Returning an
+  empty slice means the consuming templates emit no og:image / twitter:image
+  tags, which is fine for a text-only blog.
+*/ -}}
+{{- return slice -}}
