@@ -192,4 +192,4 @@ Under `investigations/`:
 
 The diff test makes review mostly mechanical. If a maintainer wants
 to take the AVX2 path under their own attribution, it's ready to
-drop in. Otherwise I'll send a `[DISCUSS]` to `dev@arrow.apache.org`.
+drop in.
