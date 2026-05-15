@@ -15,6 +15,9 @@ buildFuture = false
 buildExpired = false
 pygmentsUseClasses = true
 
+# PaperMod v8.0 warns about a partial-path quirk on every build; suppress it.
+ignoreLogs = ['warning-partial-superfluous-prefix']
+
 [minify]
   disableXML = true
   minifyOutput = true
@@ -37,6 +40,13 @@ pygmentsUseClasses = true
   UseHugoToc = true
   disableSpecial1stPost = false
   hideMeta = false
+
+  # PaperMod v8.0's opengraph/twitter_cards templates fall back to the removed
+  # `site.Social.*` API when `params.social` is undefined. Define empty values
+  # so execution stays in the modern branch.
+  [params.social]
+    twitter = ""
+    facebook_admin = ""
 
   [params.homeInfoParams]
     Title = "dmatth1"
