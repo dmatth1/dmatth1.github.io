@@ -198,3 +198,8 @@ Under `investigations/`:
 - `parquet_port/reference/` — verbatim source from the three
   upstream readers.
 - `PARQUET.md` — technical analysis.
+
+## Upstream
+
+Sent a `[DISCUSS]` to `dev@arrow.apache.org`:
+[lists.apache.org thread](https://lists.apache.org/thread/omof0fq47tndfd80g5hwp2bvjmzvpb40).
