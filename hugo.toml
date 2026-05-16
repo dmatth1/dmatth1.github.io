@@ -77,16 +77,6 @@ ignoreLogs = ['warning-partial-superfluous-prefix']
     url = "/posts/"
     weight = 10
   [[menu.main]]
-    identifier = "tags"
-    name = "tags"
-    url = "/tags/"
-    weight = 20
-  [[menu.main]]
-    identifier = "search"
-    name = "search"
-    url = "/search/"
-    weight = 30
-  [[menu.main]]
     identifier = "github"
     name = "github"
     url = "https://github.com/dmatth1"
