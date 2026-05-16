@@ -1,7 +1,7 @@
 ---
 title: "arrow-cpp, arrow-rs, and Velox still ship the scalar Parquet bloom probe"
 date: 2026-05-15
-description: "arrow-go shipped AVX2/SSE4/NEON SBBF probes in 18.3.0 (PR #336). The other three big readers still ship the scalar reference. Here's a drop-in port, bit-identical and 3–5× faster on the probe microbenchmark."
+description: "arrow-go shipped AVX2/SSE4/NEON SBBF probes in 18.3.0 (PR #336). The other three readers still ship the scalar reference. A C++ port, bit-identical and 3–5× faster on the probe microbenchmark."
 tags: ["bloom-filter", "performance", "parquet", "simd", "apache-arrow"]
 ShowToc: true
 TocOpen: false
@@ -9,15 +9,14 @@ draft: false
 ---
 
 arrow-go shipped AVX2/SSE4/NEON SBBF probes in 18.3.0
-([PR #336](https://github.com/apache/arrow-go/pull/336)). The other
-three big native Parquet readers — arrow-cpp, arrow-rs, and Velox —
-still ship the scalar reference, line-for-line identical across all
-three. Together they cover essentially the C-family Parquet
-ecosystem: DuckDB, ClickHouse, Polars, DataFusion, Trino, Presto,
-Spark-native, StarRocks, Doris, pyarrow → pandas, Apache Drill.
+([PR #336](https://github.com/apache/arrow-go/pull/336)). arrow-cpp,
+arrow-rs, and Velox still ship the scalar reference, line-for-line
+identical. Those three cover the C-family Parquet ecosystem: DuckDB,
+ClickHouse, Polars, DataFusion, Trino, Presto, Spark-native,
+StarRocks, Doris, pyarrow → pandas, Apache Drill.
 
 A C++ port of the arrow-go approach: bit-identical on 167M
-(query, filter) pairs, 3–5× in-cache in the probe microbenchmark,
+(query, filter) pairs, 3–5× in-cache on the probe microbenchmark,
 1.5× out-of-L3 with a 4-way bulk path across row-group filters.
 
 ## The three still-scalar implementations
@@ -79,10 +78,10 @@ bool BlockSplitBloomFilter::findHash(uint64_t hash) const {
 }
 ```
 
-Eight dependent 32-bit loads per probe, an early-exit branch after
-each. Compilers don't auto-vectorize this — the early `return false`
-prevents LLVM and GCC from proving equivalence with a horizontal
-AND-test across the block.
+Eight dependent 32-bit loads per probe, early-exit branch after each.
+LLVM and GCC don't auto-vectorize this — the early `return false`
+blocks the equivalence proof with a horizontal AND-test across the
+block.
 
 ## The spec maps onto AVX2
 
@@ -93,13 +92,13 @@ The 2018 SBBF spec dictates:
 - Bit position formula `(key * SALT[i]) >> 27` for `i = 0..7` =
   `vpmulld + vpsrld` across 8 lanes.
 - "All 8 bits set?" check = `_mm256_testc_si256` in one op.
-- The eight 32-bit SALT constants slot into `_mm256_load_si256(SALT)`.
+- The eight SALT constants slot into `_mm256_load_si256(SALT)`.
 
-The on-disk format is, in essence, an instruction sheet for an AVX2
-implementation. Apache Impala and Kudu shipped AVX2 SBBF probes
-years ago; arrow-go added AVX2/SSE4/NEON last year. Apache Arrow
-C++ shipped the scalar pseudocode reference from day one, and
-arrow-rs and Velox each ported from it, scalar shape and all.
+The on-disk format reads like an instruction sheet for AVX2. Impala
+and Kudu shipped AVX2 SBBF probes years ago; arrow-go added
+AVX2/SSE4/NEON last year. Apache Arrow C++ shipped the scalar
+pseudocode reference from day one, and arrow-rs and Velox ported
+from it, scalar shape and all.
 
 ## The AVX2 probe
 
@@ -125,37 +124,34 @@ bool find_avx2(uint64_t hash) const {
 
 About a dozen instructions, no branches, ~7 cycles in the hot path.
 
-`_mm256_mullo_epi32(hash_v, salt)` produces eight 32-bit products
-each equal to scalar `key * SALT[i]`. The shift and shift-left
-produce the same 8 bit positions. `_mm256_testc_si256` returns 1 iff
-`(~block & mask) == 0` — the same condition as "every mask bit set
-in the block." Bit-identical to the scalar path on every input.
+`_mm256_mullo_epi32(hash_v, salt)` produces eight 32-bit products,
+each equal to scalar `key * SALT[i]`. The shifts produce the same 8
+bit positions. `_mm256_testc_si256` returns 1 iff `(~block & mask) == 0`
+— the same condition as "every mask bit set in the block."
+Bit-identical to the scalar path on every input.
 
 The bench in the repo runs both paths on the same Parquet-format
-data (same SALT, same XXH64, same Lemire fastrange bucket index):
-**0 mismatches across 167M (query, filter) pairs.**
+data (same SALT, same XXH64, same Lemire fastrange bucket index): 0
+mismatches across 167M (query, filter) pairs.
 
 ## Numbers
 
 Intel Xeon @ 2.8 GHz (Cascade Lake-class, 33 MiB L3, virtualised),
 `g++ -O3 -mavx2 -mbmi2`:
 
-| Regime              | Filter footprint |   scalar | AVX2 single-key      | AVX2 4-way bulk      |
-|---------------------|-----------------:|---------:|---------------------:|---------------------:|
-| Small (in-cache)    |          0.5 MiB | 12.73 ns | **3.70 ns (3.4×)**   | **2.36 ns (5.4×)**   |
-| Medium (out-of-L3)  |          128 MiB | 35.84 ns | 29.18 ns (1.2×)      | **22.79 ns (1.6×)**  |
-| Large (deep DRAM)   |            1 GiB | 41.41 ns | 35.90 ns (1.15×)     | **27.75 ns (1.5×)**  |
+| Regime             | Filter footprint |   scalar | AVX2 single-key      | AVX2 4-way bulk      |
+|--------------------|-----------------:|---------:|---------------------:|---------------------:|
+| Small (in-cache)   |          0.5 MiB | 12.73 ns | **3.70 ns (3.4×)**   | **2.36 ns (5.4×)**   |
+| Medium (out-of-L3) |          128 MiB | 35.84 ns | 29.18 ns (1.2×)      | **22.79 ns (1.6×)**  |
+| Large (deep DRAM)  |            1 GiB | 41.41 ns | 35.90 ns (1.15×)     | **27.75 ns (1.5×)**  |
 
-In-cache the bottleneck is ALU work. The scalar 8-iteration loop has
-8 dependent loads with branches; the AVX2 path is two SIMD ops after
-one cache-line load. 3.4× is the ALU collapse.
+In-cache the bottleneck is ALU work: 8 dependent loads with branches
+vs. two SIMD ops after one cache-line load. 3.4× is the ALU collapse.
 
 Out-of-L3 both paths wait for the same DRAM load and the per-probe
-gain narrows to ~1.15–1.2×. SBBF was already cache-line-blocked in
-2018 — that win was cashed long ago. The 4-way bulk path (one query
-hash probed against four row-group filters in parallel) recovers
-most of the gap by overlapping four cache misses in flight at once.
-~1.5× out-of-L3, more than triple the single-key gain.
+gain narrows to 1.15–1.2×. The 4-way bulk path (one query hash
+probed against four row-group filters in parallel) overlaps four
+cache misses in flight and recovers ~1.5×.
 
 ## What the AVX2 path touches
 
@@ -175,11 +171,10 @@ Same on-disk format, no behaviour change for any reader.
 ## ARM
 
 x86 AVX2 only — no NEON or SVE2 measurements. The intrinsics map
-almost line-for-line on paper (NEON with two ops per 256-bit block
-since it's 128-bit; SVE2 with one register on Graviton 3/4), but
-without numbers that's hand-wave. The ALU-collapse argument should
-still apply on NEON since the dependent-load chain is the same; my
-guess is **~2–2.5×** in-cache, but it needs measuring.
+almost line-for-line on paper (NEON in two 128-bit ops per block;
+SVE2 in one register on Graviton 3/4), but the ratios need measuring.
+The ALU collapse should still apply since the dependent-load chain
+is the same; rough estimate 2–2.5× in-cache.
 
 Upstream the AVX2 path lands behind a CpuInfo runtime dispatch;
 non-AVX2 builds keep the scalar path.
@@ -198,7 +193,3 @@ Under `investigations/`:
 - `parquet_port/reference/` — verbatim source from the three
   upstream readers.
 - `PARQUET.md` — technical analysis.
-
-The diff test makes review mostly mechanical. If a maintainer wants
-to take the AVX2 path under their own attribution, it's ready to
-drop in.
