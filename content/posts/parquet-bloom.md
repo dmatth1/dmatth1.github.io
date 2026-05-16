@@ -9,11 +9,11 @@ draft: false
 ---
 
 arrow-go shipped AVX2/SSE4/NEON SBBF probes in 18.3.0
-([PR #336](https://github.com/apache/arrow-go/pull/336)). arrow-cpp,
-arrow-rs, and Velox still ship the scalar reference, line-for-line
-identical. Those three cover the C-family Parquet ecosystem: DuckDB,
-ClickHouse, Polars, DataFusion, Trino, Presto, Spark-native,
-StarRocks, Doris, pyarrow → pandas, Apache Drill.
+([PR #336](https://github.com/apache/arrow-go/pull/336)). arrow-cpp
+and Velox ship the same scalar reference line-for-line; arrow-rs is
+the same algorithm in Rust. Those three cover the C-family Parquet
+ecosystem: DuckDB, ClickHouse, Polars, DataFusion, Trino, Presto,
+Spark via Gluten, StarRocks, Doris, pyarrow → pandas, Apache Drill.
 
 A C++ port of the arrow-go approach: bit-identical on 167M
 (query, filter) pairs, 3–5× in-cache on the probe microbenchmark,
@@ -58,7 +58,7 @@ fn check(&self, hash: u32) -> bool {
 ```
 
 Velox ([`BloomFilter.cpp:196`](https://github.com/facebookincubator/velox/blob/main/velox/dwio/parquet/common/BloomFilter.cpp#L196)),
-which powers Prestissimo, Trino, and Spark-native:
+which powers Prestissimo and Trino, and JVM Spark via Gluten:
 
 ```cpp
 bool BlockSplitBloomFilter::findHash(uint64_t hash) const {
@@ -137,7 +137,8 @@ mismatches across 167M (query, filter) pairs.
 ## Numbers
 
 Intel Xeon @ 2.8 GHz (Cascade Lake-class, 33 MiB L3, virtualised),
-`g++ -O3 -mavx2 -mbmi2`:
+`g++ -O3 -mavx2 -mbmi2`. All numbers are post-hash probe latency;
+XXH64 is computed once at setup and excluded from the timed loop.
 
 | Regime             | Filter footprint |   scalar | AVX2 single-key      | AVX2 4-way bulk      |
 |--------------------|-----------------:|---------:|---------------------:|---------------------:|
@@ -146,7 +147,8 @@ Intel Xeon @ 2.8 GHz (Cascade Lake-class, 33 MiB L3, virtualised),
 | Large (deep DRAM)  |            1 GiB | 41.41 ns | 35.90 ns (1.15×)     | **27.75 ns (1.5×)**  |
 
 In-cache the bottleneck is ALU work: 8 dependent loads with branches
-vs. two SIMD ops after one cache-line load. 3.4× is the ALU collapse.
+vs. two SIMD ops after one cache-line load. The 3.4× comes from
+collapsing that ALU work.
 
 Out-of-L3 both paths wait for the same DRAM load and the per-probe
 gain narrows to 1.15–1.2×. The 4-way bulk path (one query hash
@@ -155,7 +157,10 @@ cache misses in flight and recovers ~1.5×.
 
 ## What the AVX2 path touches
 
-Scoped to the probe stage, not query wall time:
+Scoped to the probe stage, not query wall time. Databricks moved off
+Parquet bloom for Photon predictive I/O, but the rest of the OSS
+lakehouse — Iceberg, Hudi, DuckDB, ClickHouse — still scans through
+this code.
 
 | Concern                                          | AVX2 changes it?                                  |
 |--------------------------------------------------|---------------------------------------------------|
