@@ -189,7 +189,7 @@ non-AVX2 builds keep the scalar path.
 Standalone bench, vendored scalar references from arrow-cpp /
 arrow-rs / Velox for diffing against upstream, full results:
 
-**[github.com/dmatth1/quickbloom](https://github.com/dmatth1/quickbloom)**
+**[github.com/dmatth1/quickbloom — `parquet-xsimd-port` branch](https://github.com/dmatth1/quickbloom/tree/parquet-xsimd-port)**
 
 Under `investigations/`:
 
