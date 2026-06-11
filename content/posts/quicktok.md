@@ -10,7 +10,7 @@ draft: false
 
 Github link: https://github.com/dmatth1/quicktok
 
-quicktok is a fast, exact BPE tokenizer for OpenAI encodings written in C++. Measured at **6–8×** faster than `tiktoken` and **3x** faster than `bpe-openai`,  I believe it's the faster tokenizer available. quicktok is useful for anyone doing large amounts of data processing and indexing (search indexing, ingesting corpora) and can significantly reduce time and costs of data ingestion. It can also be used for online transactions processing such as for inference. I'm releasing it as a Python library `pip install quicktok` and it's available via C++ source. 
+**quicktok** is a fast, exact BPE tokenizer for OpenAI encodings written in C++. Measured at **6–8×** faster than `tiktoken` and **3x** faster than `bpe-openai`,  I believe it's the faster tokenizer available. This is useful for anyone doing large amounts of data processing and indexing (search indexing, ingesting corpora) and can significantly reduce time and costs of data ingestion. It can also be used for online transactions processing such as for inference. I'm releasing it as a Python library `pip install quicktok` and it's available via C++ source. 
 
 ## Benchmarks
 
@@ -24,7 +24,7 @@ Measured on the same corpus on my Apple M1 and single-thread:
 | tiktoken (Python) | 14.0 | 12.1 |
 | TokenDagger | 10.8 | 12.2 |
 
-`quicktok` also beats llama.cpp's tokenizer on the Llama-3 vocab by **~14x**. The `encode_batch` function runs tokenization in parallel and achieves speeds up to 550 MB/s (**24×** faster than tiktoken batch) on my M1 macbook.
+**quicktok** also beats llama.cpp's tokenizer on the Llama-3 vocab by **~14x**. The `encode_batch` function runs tokenization in parallel and achieves speeds up to 550 MB/s (**24×** faster than tiktoken batch) on my M1 macbook. The speedups hold on other architectures like x86.
 
 ## How it works
 
