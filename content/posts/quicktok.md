@@ -20,13 +20,23 @@ Measured on the same corpus on my Apple M1 and single-thread, MB/s:
 
 | encoder | The Pile | Code | Common Crawl |
 |---|---:|---:|---:|
-| **quicktok** | **110.2** | **132.3** | **66.5** |
-| bpe-openai | 33.9 | 39.5 | 27.2 |
-| tiktoken-rs | 15.1 | 13.6 | 12.7 |
-| tiktoken (Python) | 13.8 | 12.7 | 11.7 |
-| TokenDagger | 10.7 | 11.5 | 10.5 |
+| **quicktok** | **116.1** | **144.2** | **75.2** |
+| bpe-openai | 36.5 | 41.6 | 29.2 |
+| tiktoken-rs | 15.3 | 14.3 | 13.5 |
+| tiktoken (Python) | 14.7 | 13.2 | 12.3 |
+| TokenDagger | 11.5 | 12.0 | 11.2 |
 
-**quicktok** also beats llama.cpp's tokenizer on the Llama-3 vocab by **~14x**. The `encode_batch` function runs tokenization in parallel and achieves speeds up to 550 MB/s (**24×** faster than tiktoken batch) on my M1 macbook. The speedups hold on other architectures like x86.
+**o200k_base** (GPT-4o)
+
+| encoder | The Pile | Code | Common Crawl |
+|---|---:|---:|---:|
+| **quicktok** | **100.6** | **117.1** | **59.2** |
+| bpe-openai | 36.1 | 40.1 | 29.9 |
+| tiktoken-rs | 23.1 | 20.9 | 17.9 |
+| tiktoken (Python) | 21.6 | 19.3 | 16.3 |
+| TokenDagger | 11.0 | 11.7 | 10.2 |
+
+**quicktok** also beats llama.cpp's tokenizer on the Llama-3 vocab by **~14x**. The `encode_batch` function runs tokenization in parallel and achieves speeds up to 706 MB/s (**24×** faster than tiktoken batch) on my M1 macbook. The speedups hold on other architectures like x86.
 
 ## How it works
 
