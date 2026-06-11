@@ -40,7 +40,7 @@ Measured on 3 public corpora on my Apple M1 and single-thread, MB/s:
 
 ## How it works
 
-The fundamental algorithm is the same as `bpe-openai`(exact backtracking BPE) - see [the blog post](https://github.blog/ai-and-ml/llms/so-many-tokens-so-little-time-introducing-a-faster-more-flexible-byte-pair-tokenizer/). Much of the speedup over `bpe-openai` comes from data-structure engineering:
+The fundamental algorithm is the same as `bpe-openai`(exact backtracking BPE) - see [the blog post](https://github.blog/ai-and-ml/llms/so-many-tokens-so-little-time-introducing-a-faster-more-flexible-byte-pair-tokenizer/). Much of the speedup over `bpe-openai` comes from data-structure engineering around reducing memory accesses.
 
 * 2-byte trie: the longest-match walk reads 2 input bytes per single 16-byte cache load, with a zero-lookup direct table for CJK (Chinese/Japanese/Korean) characters.
 * Dense validity memo: merge-validity checks hit a 2 MB exactly-keyed cache (a bijective mixer means no aliasing).
