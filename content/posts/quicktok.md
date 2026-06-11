@@ -76,12 +76,12 @@ draft: false
   * **Specialized pretokenizer:** the fixed regex is compiled by hand into a
     scanner, no general regex.
 
-  ## Closing notes
-
-  **Caveats**
+  ## Caveats
   All comparisons are single-threaded by design — parallel/batch is available but I think single-threaded is fair for comparison. 
   Multilingual text (Common Crawl) is definitely the weakest ratio. Numbers above are from an M1 and were cross-checked on x86
   Xeon - the ordering holds on both but absolute MB/s moves with corpus and host.
+  
+  ## Closing notes
 
   The full methodology — corpus fetching, the exactness gate, raw-API rules — is
   in [bench/README.md](https://github.com/dmatth1/quicktok/blob/main/bench/README.md).
