@@ -87,5 +87,6 @@ draft: false
   in [bench/README.md](https://github.com/dmatth1/quicktok/blob/main/bench/README.md).
   If you find an input where quicktok's ids differ from tiktoken's that's definitely a bug and please report it!
 
-  - Dan
+
+*Written by Dan Mattheiss*
 
