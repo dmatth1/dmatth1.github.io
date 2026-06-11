@@ -1,13 +1,12 @@
-
-  ---
-  title: "quicktok: a faster tokenizer"
-  date: 2026-06-11
-  description: "quicktok is an exact BPE tokenizer for OpenAI and open-model encodings, 2–3.5× faster than the fastest alternative we know of."
-  tags: ["tokenizer", "performance", "openai"]
-  ShowToc: true
-  TocOpen: false
-  draft: false
-  ---
+---
+title: "quicktok: a faster tokenizer"
+date: 2026-06-10
+description: "quicktok is an OpenAI-compatible tokenizer that beats all existing tokenizers by 3-10x."
+tags: ["tokenizer", "performance", "openai"]
+ShowToc: true
+TocOpen: false
+draft: false
+---
 
   **quicktok** is a fast, exact BPE tokenizer written in C++. Token ids are
   byte-identical to `tiktoken`, and encoding runs **2–3.5×** faster than
