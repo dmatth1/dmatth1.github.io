@@ -10,7 +10,7 @@ draft: false
 
 **quicktok** is a fast, exact BPE tokenizer for OpenAI encodings written in C++. Measured at **6–8×** faster than `tiktoken` and **3x** faster than `bpe-openai`,  I believe it's the fastest tokenizer available today. This is useful for anyone doing large amounts of data processing and indexing (search indexing, ingesting corpora) and can significantly reduce time and costs of data ingestion. It can also be used for online request serving such as for inference. 
 
-I'm releasing it as a Python library `pip install quicktok` and it's available via C++ source. Repo is publicly available at https://github.com/dmatth1/quicktok.
+I'm releasing it as a Python library `pip install quicktok-v1` and it's available via C++ source. Repo is publicly available at https://github.com/dmatth1/quicktok.
 
 ## Benchmarks
 
