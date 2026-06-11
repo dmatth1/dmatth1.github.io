@@ -1,7 +1,7 @@
 ---
 title: "quicktok: a faster tokenizer"
 date: 2026-06-10
-description: "quicktok is an OpenAI-compatible tokenizer that beats all existing tokenizer by 3-10x."
+description: "quicktok is an OpenAI-compatible tokenizer that beats all existing tokenizers by 3-10x."
 tags: ["tokenizer", "performance", "openai"]
 ShowToc: true
 TocOpen: false
