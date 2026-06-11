@@ -11,7 +11,7 @@ draft: false
   **quicktok** is a fast, exact BPE tokenizer written in C++. Token ids are
   byte-identical to `tiktoken`, and encoding runs **2–3.5×** faster than
   `bpe-openai` (the fastest alternative I know of) and **4–11×** faster than
-  `tiktoken` itself — I believe it's the fastest exact CPU tokenizer available
+  `tiktoken` itself. I believe it's the fastest exact CPU tokenizer available
   today for these encodings. It ships cl100k, o200k, GPT-OSS (o200k_harmony),
   Llama-3, and Qwen2.5/3, all byte-exact, plus bring-your-own Llama-4.
 
@@ -28,7 +28,7 @@ draft: false
 
   Measured on 3 public corpora on my Apple M1, single thread, MB/s. Every
   encoder's output was verified token-for-token identical against `tiktoken`
-  before timing — a mismatch fails the run.
+  before timing.
 
   **cl100k_base** (GPT-3.5 / GPT-4)
 
@@ -58,16 +58,7 @@ draft: false
   To keep the comparison fair, each encoder is called through the same raw API
   its own benchmark uses. (TokenDagger's README claims 2–4× over tiktoken, but
   that's on Llama-4/Mistral vocabs on AMD EPYC; on cl100k/o200k it lands around
-  Python tiktoken's level.) You can reproduce all of this yourself:
-  `make bench-compare` in the repo re-fetches the same three corpora and reruns
-  every encoder.
-
-  Exactness-gating every benchmark turned out to be more than hygiene — it caught
-  a real bug in my o200k pretokenizer (CJK text directly followed by Latin
-  capitals was split differently than tiktoken; found by 168 mismatched tokens in
-  6.9M on Common Crawl), and a benchmark-harness bug where Python's text-mode
-  file reads silently translate `\r\n` to `\n`, handing tiktoken different bytes
-  than every other encoder.
+  Python tiktoken's level.) To reproduce run `make bench-compare` in the repo.
 
   ## How it works
   
@@ -86,15 +77,15 @@ draft: false
     scanner, no general regex.
 
   ## Closing notes
-  
-  A few honest caveats. All headline comparisons are single-threaded by design —
-  parallel scaling is a separate (and good) story, but mixing the two flatters
-  whoever has the better batch API. Multilingual text (Common Crawl) is the
-  weakest ratio. Numbers above are from an M1 and were cross-checked on an x86
-  Xeon; the ordering holds on both, but absolute MB/s moves with corpus and host.
+
+  **Caveats**
+  All comparisons are single-threaded by design — parallel/batch is available but I think single-threaded is fair for comparison. 
+  Multilingual text (Common Crawl) is definitely the weakest ratio. Numbers above are from an M1 and were cross-checked on x86
+  Xeon - the ordering holds on both but absolute MB/s moves with corpus and host.
 
   The full methodology — corpus fetching, the exactness gate, raw-API rules — is
   in [bench/README.md](https://github.com/dmatth1/quicktok/blob/main/bench/README.md).
-  If you find an input where quicktok's ids differ from tiktoken's, that's a bug:
-  please file it.
+  If you find an input where quicktok's ids differ from tiktoken's that's definitely a bug and please report it!
+
+  - Dan
 
