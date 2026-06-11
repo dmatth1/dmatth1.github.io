@@ -1,7 +1,7 @@
 ---
 title: "quicktok: a faster tokenizer"
 date: 2026-06-11
-description: "quicktok is an exact BPE tokenizer for OpenAI and open-model encodings that beats all existing tokenizers by 2-10x."
+description: "quicktok is an exact BPE tokenizer for OpenAI and open-model encodings that beats alternatives by 2-10x."
 tags: ["tokenizer", "performance", "openai"]
 ShowToc: true
 TocOpen: false
