@@ -14,11 +14,11 @@ I'm releasing it as a Python library `pip install quicktok` and it's available v
 
 ## Benchmarks
 
-Measured on the same corpus on my Apple M1 and single-thread, MB/s:
+Measured on 3 public corpora on my Apple M1 and single-thread, MB/s:
 
 **cl100k_base** (GPT-3.5 / GPT-4)
 
-| encoder | The Pile | Code | Common Crawl |
+| encoder | The Pile | Github Code | Common Crawl |
 |---|---:|---:|---:|
 | **quicktok** | **116.1** | **144.2** | **75.2** |
 | bpe-openai | 36.5 | 41.6 | 29.2 |
@@ -28,7 +28,7 @@ Measured on the same corpus on my Apple M1 and single-thread, MB/s:
 
 **o200k_base** (GPT-4o)
 
-| encoder | The Pile | Code | Common Crawl |
+| encoder | The Pile | Github Code | Common Crawl |
 |---|---:|---:|---:|
 | **quicktok** | **100.6** | **117.1** | **59.2** |
 | bpe-openai | 36.1 | 40.1 | 29.9 |
